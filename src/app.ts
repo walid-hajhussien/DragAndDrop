@@ -2,12 +2,11 @@
 const registerValidator: ValidatorStorage = {};
 
 
-
 // section: models
 
 // note : ValidatorModel to create validator object
 class ValidatorModel {
-    constructor(public type: string, public value: number | string | null = null) {
+    constructor(public type: string, public value: number) {
     }
 }
 
@@ -17,6 +16,7 @@ class ProjectModel {
     public title: string;
     @MinLengthDecorator(6)
     public description: string;
+    @PositiveValueDecorator()
     public people: number;
 
     constructor(title: string, description: string, people: number) {
@@ -26,9 +26,11 @@ class ProjectModel {
     }
 }
 
-
-
-
+// note : type ValidatorInfo = { isValid: boolean, inValid: { propertyName: string, error: string } }
+class ValidatorInfoModel {
+    constructor(public isValid: boolean, public inValidProperty: InValid[]) {
+    }
+}
 
 // Section : Classes
 /*
@@ -80,6 +82,7 @@ class ProjectInput {
         const [title, desc, people] = input;
         const project: ProjectModel = new ProjectModel(title, desc, people);
         console.log(registerValidator);
+        console.log("validator", validator(project));
         this.clearInput();
 
     }
@@ -130,15 +133,15 @@ function RequiredDecorator(): PropertyDecoratorType {
         if (registerValidator.hasOwnProperty(className)) {
             // note : check if the property name validator register
             if (registerValidator[className].hasOwnProperty(name)) {
-                registerValidator[className][name].push(new ValidatorModel('required'));
+                registerValidator[className][name].push(new ValidatorModel('required', 0));
             } else {
-                registerValidator[className][name] = [new ValidatorModel('required')];
+                registerValidator[className][name] = [new ValidatorModel('required', 0)];
             }
 
         } else {
             // note : class validation not register
             registerValidator[className] = {
-                [name]: [new ValidatorModel('required')]
+                [name]: [new ValidatorModel('required', 0)]
             }
         }
     }
@@ -168,9 +171,34 @@ function MinLengthDecorator(minLength: number): PropertyDecoratorType {
     }
 }
 
+/*
+* note : PositiveValue decorator to validate positive number
+*  target : class , name: property name
+* */
+function PositiveValueDecorator(): PropertyDecoratorType {
+    return function (target: any, name: string): void {
+        const className = target.constructor.name;
+        if (registerValidator.hasOwnProperty(className)) {
+            // note : check if the property name validator register
+            if (registerValidator[className].hasOwnProperty(name)) {
+                registerValidator[className][name].push(new ValidatorModel('positive', 0));
+            } else {
+                registerValidator[className][name] = [new ValidatorModel('positive', 0)];
+            }
+
+        } else {
+            // note : class validation not register
+            registerValidator[className] = {
+                [name]: [new ValidatorModel('minLength', 0)]
+            }
+        }
+    }
+}
+
 // section : Type
 type UserInputType = [string, string, number];
 type PropertyDecoratorType = (target: any, name: string) => void;
+type InValid = { propertyName: string, error: string } ;
 
 
 // section: interface
@@ -181,9 +209,62 @@ interface ValidatorStorage {
     }
 }
 
+// section : utility 
+function validator(obj: any): ValidatorInfoModel {
+    const className = obj.constructor.name;
+    const classValidator = registerValidator[className];
+    // note : no validator
+    if (!classValidator) {
+        return new ValidatorInfoModel(true, []);
+    }
+
+    let isValid = true;
+    let inValidProperty: InValid[] = [];
+
+    for (let propertyName in classValidator) {
+        classValidator[propertyName].map((validatorObj, _index) => {
+            switch (validatorObj.type) {
+                case 'required': {
+                    const isValidProperty = obj[propertyName].length > 0;
+                    if (!isValidProperty) {
+                        isValid = false;
+                        inValidProperty.push({propertyName: propertyName, error: `${propertyName} is required!`})
+                    }
+                    break;
+                }
+                case 'minLength': {
+                    const isValidProperty = obj[propertyName].length > validatorObj.value;
+                    if (!isValidProperty) {
+                        isValid = false;
+                        inValidProperty.push({
+                            propertyName: propertyName,
+                            error: `The Minimum Length For ${propertyName} is ${validatorObj.value}`
+                        })
+                    }
+                    break;
+                }
+                case 'positive': {
+                    const isValidProperty = obj[propertyName] > 0;
+                    if (!isValidProperty) {
+                        isValid = false;
+                        inValidProperty.push({
+                            propertyName: propertyName,
+                            error: `The Value For ${propertyName} Not Valid : ${validatorObj.value}`
+                        })
+                    }
+                    break;
+                }
 
 
+            }
+        })
+    }
+
+    return new ValidatorInfoModel(isValid, inValidProperty);
+}
 
 
 // section : code
 const _projInput = new ProjectInput('project-input', 'app');
+
+
