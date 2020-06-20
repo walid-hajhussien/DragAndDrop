@@ -40,10 +40,31 @@ class ProjectInput {
         // note : addEventListener will missing the context , we can fix by using bind or decorator
         this.templateContent.addEventListener('submit', this.submitForm);
     }
+
     @AutoBindingDecorator
     private submitForm(event: Event) {
         event.preventDefault();
-        console.log('submit', this.titleInput);
+        const input: UserInputType = this.getUserInput();
+        const [title, desc, people] = input;
+        const project: ProjectModel = new ProjectModel(title, desc, people);
+        console.log(registerValidator);
+        this.clearInput();
+
+    }
+
+    // note : return tuple
+    getUserInput(): UserInputType {
+        const title: string = this.titleInput.value;
+        const description: string = this.descriptionInput.value;
+        const pepole: number = +this.peopleInput.value;
+        return [title, description, pepole]
+    }
+
+    //note : clear all the input
+    private clearInput(): void {
+        this.titleInput.value = '';
+        this.descriptionInput.value = '';
+        this.peopleInput.value = '';
     }
 
 }
@@ -56,15 +77,70 @@ class ProjectInput {
 *
 * */
 function AutoBindingDecorator(_target: any, _name: string, descriptor: PropertyDescriptor): PropertyDescriptor {
-   const newDescriptor:PropertyDescriptor = {
-       enumerable: descriptor.enumerable,
-       configurable: descriptor.configurable,
-       get() {
-           const newValue = descriptor.value.bind(this);
-           return newValue
-       }
-   }
+    const newDescriptor: PropertyDescriptor = {
+        enumerable: descriptor.enumerable,
+        configurable: descriptor.configurable,
+        get() {
+            const newValue = descriptor.value.bind(this);
+            return newValue
+        }
+    }
     return (newDescriptor)
+}
+
+/*
+* note : required decorator
+*  target : class , name: property name
+* */
+function RequiredDecorator(): PropertyDecoratorType {
+    return function (target: any, name: string): void {
+        const className = target.constructor.name;
+        if (registerValidator.hasOwnProperty(className)) {
+            // note : check if the property name validator register
+            if (registerValidator[className].hasOwnProperty(name)) {
+                registerValidator[className][name].push('required');
+            } else {
+                registerValidator[className][name] = ['required'];
+            }
+
+        } else {
+            // note : class validation not register
+            registerValidator[className] = {
+                [name]: ['required']
+            }
+        }
+    }
+}
+
+// section : Type
+type UserInputType = [string, string, number];
+type PropertyDecoratorType = (target: any, name: string) => void;
+
+// section: interface
+// note : to validate the register storage
+interface ValidatorStorage {
+    [className: string]: {
+        [propertyName: string]: string[];
+    }
+}
+
+// section: storage
+const registerValidator: ValidatorStorage = {};
+
+
+// section: models
+class ProjectModel {
+    @RequiredDecorator()
+    public title: string;
+    @RequiredDecorator()
+    public description: string;
+    public people: number;
+
+    constructor(title: string, description: string, people: number) {
+        this.description = description;
+        this.title = title;
+        this.people = people;
+    }
 }
 
 // section : code
