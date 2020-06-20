@@ -43,12 +43,14 @@ class ProjectInput {
     private titleInput: HTMLInputElement;
     private descriptionInput: HTMLInputElement;
     private peopleInput: HTMLInputElement;
+    private errorLists: HTMLUListElement;
 
 
     constructor(templateId: string, hostingId: string) {
 
         this.template = document.getElementById(templateId)! as HTMLTemplateElement;
         this.hostingEl = document.getElementById(hostingId)! as HTMLDivElement;
+
         // note : get the Fragment of the template
         // note : true mean get all the element
         const importedNode: DocumentFragment = document.importNode(this.template.content, true);
@@ -59,6 +61,7 @@ class ProjectInput {
         this.titleInput = this.templateContent.querySelector('#title')! as HTMLInputElement;
         this.descriptionInput = this.templateContent.querySelector('#description')! as HTMLInputElement;
         this.peopleInput = this.templateContent.querySelector('#people')! as HTMLInputElement;
+        this.errorLists = this.templateContent.querySelector('#errorMessages')! as HTMLUListElement;
         // note : render the content
         this.attach();
         // note : add the event
@@ -81,10 +84,15 @@ class ProjectInput {
         const input: UserInputType = this.getUserInput();
         const [title, desc, people] = input;
         const project: ProjectModel = new ProjectModel(title, desc, people);
+        const validatorResult = validator(project);
         console.log(registerValidator);
-        console.log("validator", validator(project));
-        this.clearInput();
+        console.log("validator", validatorResult);
+        if(validatorResult.isValid){
+            this.clearInput();
+            return;
+        }
 
+        this.showErrorMessages(validatorResult.inValidProperty);
     }
 
     // note : return tuple
@@ -100,6 +108,16 @@ class ProjectInput {
         this.titleInput.value = '';
         this.descriptionInput.value = '';
         this.peopleInput.value = '';
+        this.errorLists.innerHTML = '';
+    }
+
+    //note : show error messages
+    private showErrorMessages(errorMessages: InValid[]): void {
+        let lists = ``;
+        errorMessages.map((value, _index) => {
+            lists = lists + `<li>${value.error}</li>`
+        })
+        this.errorLists.innerHTML = lists;
     }
 
 }
@@ -228,7 +246,7 @@ function validator(obj: any): ValidatorInfoModel {
                     const isValidProperty = obj[propertyName].length > 0;
                     if (!isValidProperty) {
                         isValid = false;
-                        inValidProperty.push({propertyName: propertyName, error: `${propertyName} is required!`})
+                        inValidProperty.push({propertyName: propertyName, error: `The ${propertyName.toLocaleUpperCase()} is required!`})
                     }
                     break;
                 }
@@ -249,7 +267,7 @@ function validator(obj: any): ValidatorInfoModel {
                         isValid = false;
                         inValidProperty.push({
                             propertyName: propertyName,
-                            error: `The Value For ${propertyName} Not Valid : ${validatorObj.value}`
+                            error: `The Value For ${propertyName} Is Not Valid : ${validatorObj.value}`
                         })
                     }
                     break;
