@@ -1,3 +1,35 @@
+// section: storage
+const registerValidator: ValidatorStorage = {};
+
+
+
+// section: models
+
+// note : ValidatorModel to create validator object
+class ValidatorModel {
+    constructor(public type: string, public value: number | string | null = null) {
+    }
+}
+
+// note : ProjectModel to create project
+class ProjectModel {
+    @RequiredDecorator()
+    public title: string;
+    @MinLengthDecorator(6)
+    public description: string;
+    public people: number;
+
+    constructor(title: string, description: string, people: number) {
+        this.description = description;
+        this.title = title;
+        this.people = people;
+    }
+}
+
+
+
+
+
 // Section : Classes
 /*
 * note 1 : you need to inform ts what is you going to select (document.getElementById) & not null
@@ -98,15 +130,39 @@ function RequiredDecorator(): PropertyDecoratorType {
         if (registerValidator.hasOwnProperty(className)) {
             // note : check if the property name validator register
             if (registerValidator[className].hasOwnProperty(name)) {
-                registerValidator[className][name].push('required');
+                registerValidator[className][name].push(new ValidatorModel('required'));
             } else {
-                registerValidator[className][name] = ['required'];
+                registerValidator[className][name] = [new ValidatorModel('required')];
             }
 
         } else {
             // note : class validation not register
             registerValidator[className] = {
-                [name]: ['required']
+                [name]: [new ValidatorModel('required')]
+            }
+        }
+    }
+}
+
+/*
+* note : minLength decorator
+*  target : class , name: property name
+* */
+function MinLengthDecorator(minLength: number): PropertyDecoratorType {
+    return function (target: any, name: string): void {
+        const className = target.constructor.name;
+        if (registerValidator.hasOwnProperty(className)) {
+            // note : check if the property name validator register
+            if (registerValidator[className].hasOwnProperty(name)) {
+                registerValidator[className][name].push(new ValidatorModel('minLength', minLength));
+            } else {
+                registerValidator[className][name] = [new ValidatorModel('minLength', minLength)];
+            }
+
+        } else {
+            // note : class validation not register
+            registerValidator[className] = {
+                [name]: [new ValidatorModel('minLength', minLength)]
             }
         }
     }
@@ -116,32 +172,18 @@ function RequiredDecorator(): PropertyDecoratorType {
 type UserInputType = [string, string, number];
 type PropertyDecoratorType = (target: any, name: string) => void;
 
+
 // section: interface
 // note : to validate the register storage
 interface ValidatorStorage {
     [className: string]: {
-        [propertyName: string]: string[];
+        [propertyName: string]: ValidatorModel[];
     }
 }
 
-// section: storage
-const registerValidator: ValidatorStorage = {};
 
 
-// section: models
-class ProjectModel {
-    @RequiredDecorator()
-    public title: string;
-    @RequiredDecorator()
-    public description: string;
-    public people: number;
 
-    constructor(title: string, description: string, people: number) {
-        this.description = description;
-        this.title = title;
-        this.people = people;
-    }
-}
 
 // section : code
 const _projInput = new ProjectInput('project-input', 'app');
