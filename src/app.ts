@@ -35,15 +35,36 @@ class ProjectInput {
         this.hostingEl.insertAdjacentElement('afterbegin', this.templateContent);
     }
 
+
     private configForm() {
+        // note : addEventListener will missing the context , we can fix by using bind or decorator
         this.templateContent.addEventListener('submit', this.submitForm);
     }
-
+    @AutoBindingDecorator
     private submitForm(event: Event) {
         event.preventDefault();
-        console.log('submit')
+        console.log('submit', this.titleInput);
     }
 
+}
+
+// section : Decorator
+
+/*
+* note: (_)  means I will not use but don't complain
+*  target : class , name : method name , descriptor : PropertyDescriptor
+*
+* */
+function AutoBindingDecorator(_target: any, _name: string, descriptor: PropertyDescriptor): PropertyDescriptor {
+   const newDescriptor:PropertyDescriptor = {
+       enumerable: descriptor.enumerable,
+       configurable: descriptor.configurable,
+       get() {
+           const newValue = descriptor.value.bind(this);
+           return newValue
+       }
+   }
+    return (newDescriptor)
 }
 
 // section : code
