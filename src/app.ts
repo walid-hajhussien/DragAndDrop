@@ -18,11 +18,14 @@ class ProjectModel {
     public description: string;
     @PositiveValueDecorator()
     public people: number;
+    @PositiveValueDecorator()
+    public id: number;
 
-    constructor(title: string, description: string, people: number) {
+    constructor(title: string, description: string, people: number, id: number) {
         this.description = description;
         this.title = title;
         this.people = people;
+        this.id = id;
     }
 }
 
@@ -35,6 +38,7 @@ class ValidatorInfoModel {
 // Section : Classes
 /*
 * note 1 : you need to inform ts what is you going to select (document.getElementById) & not null
+*  ProjectInput class to render the form & control it
 * */
 class ProjectInput {
     private template: HTMLTemplateElement;
@@ -62,6 +66,7 @@ class ProjectInput {
         this.descriptionInput = this.templateContent.querySelector('#description')! as HTMLInputElement;
         this.peopleInput = this.templateContent.querySelector('#people')! as HTMLInputElement;
         this.errorLists = this.templateContent.querySelector('#errorMessages')! as HTMLUListElement;
+        //note: add eventListener
         // note : render the content
         this.attach();
         // note : add the event
@@ -83,7 +88,7 @@ class ProjectInput {
         event.preventDefault();
         const input: UserInputType = this.getUserInput();
         const [title, desc, people] = input;
-        const project: ProjectModel = new ProjectModel(title, desc, people);
+        const project: ProjectModel = new ProjectModel(title, desc, people, applicationState.generateId());
         const validatorResult = validator(project);
         console.log(registerValidator);
         console.log("validator", validatorResult);
@@ -122,20 +127,89 @@ class ProjectInput {
 
 }
 
-//note : project list class to render the projects on the dom , on:active , off:finished
-class ProjectsList {
+/*
+* note : project list class to render the projects on the dom , active:active project, finished:finished project
+*
+* */
+class ProjectList {
     templateEl: HTMLTemplateElement;
     hostEl: HTMLDivElement;
     templateContent: HTMLElement;
 
 //note templateId:project-list hostingId:app
-    constructor(templateId: string, hostingId: string, private type: 'on' | 'off') {
+    constructor(templateId: string, hostingId: string, private type: 'active' | 'finished') {
         this.templateEl = document.getElementById(templateId)! as HTMLTemplateElement;
         this.hostEl = document.getElementById(hostingId)! as HTMLDivElement;
         const importedNode: DocumentFragment = document.importNode(this.templateEl.content, true);
         this.templateContent = importedNode.firstElementChild as HTMLElement;
+        this.templateContent.id = `${this.type}-'projects`;
+
+        // note: render the data
+        this.attach();
+        this.renderContent();
 
     }
+
+    private attach(): void {
+        this.hostEl.insertAdjacentElement('beforeend', this.templateContent);
+    }
+
+    private renderContent() {
+        this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`
+        this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
+    }
+}
+
+/*
+* note : state management class to mange the application state
+*  we using private constructor to apply the singleton pattern
+* note : we're guaranteed to always work with the exact same object and we'll always only have one object of the type in the entire application
+*   which is the idea here because I only want to have one state management object for our project
+* */
+
+class ProjectState {
+    // note : projectListener is a functions will be call at any update
+    private projectListeners: Function [];
+    private projects: ProjectModel[];
+    private id: number;
+    private static instance: ProjectState;
+
+    private constructor(startingId: number = 1) {
+        this.id = startingId;
+        this.projects = [];
+        this.projectListeners = [];
+    }
+
+    static createInstance(startingId: number): ProjectState {
+        if (this.instance) {
+            return this.instance;
+        }
+        this.instance = new ProjectState(startingId);
+        return this.instance;
+    }
+
+    addProject(project: ProjectModel) {
+        this.projects.push(project);
+        this.runListenerFun();
+    }
+
+    generateId() {
+        const newId = this.id;
+        this.id++;
+        return newId;
+    }
+
+    private runListenerFun() {
+        this.projectListeners.map((fn: Function) => {
+            fn(this.projects.slice());
+        })
+    }
+
+    addEventListener(fn: Function) {
+        this.projectListeners.push(fn);
+    }
+
+
 }
 
 // section : Decorator
@@ -302,6 +376,9 @@ function validator(obj: any): ValidatorInfoModel {
 
 
 // section : code
-const _projInput = new ProjectInput('project-input', 'app');
+const applicationState = ProjectState.createInstance(1);
+const projectInput = new ProjectInput('project-input', 'app');
+const activeProjects = new ProjectList('project-list', 'app', 'active');
+const finishedProjects = new ProjectList('project-list', 'app', 'finished');
 
 
