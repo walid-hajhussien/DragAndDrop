@@ -41,6 +41,7 @@ class ValidatorInfoModel {
 *  ProjectInput class to render the form & control it
 * */
 class ProjectInput {
+    private projects: ProjectModel[];
     private template: HTMLTemplateElement;
     private hostingEl: HTMLDivElement;
     private templateContent: HTMLFormElement;
@@ -51,7 +52,7 @@ class ProjectInput {
 
 
     constructor(templateId: string, hostingId: string) {
-
+        this.projects = [];
         this.template = document.getElementById(templateId)! as HTMLTemplateElement;
         this.hostingEl = document.getElementById(hostingId)! as HTMLDivElement;
 
@@ -67,6 +68,10 @@ class ProjectInput {
         this.peopleInput = this.templateContent.querySelector('#people')! as HTMLInputElement;
         this.errorLists = this.templateContent.querySelector('#errorMessages')! as HTMLUListElement;
         //note: add eventListener
+        applicationState.addEventListener((projects: ProjectModel[]) => {
+            this.projects = projects;
+            console.log("event", this.projects);
+        })
         // note : render the content
         this.attach();
         // note : add the event
@@ -93,6 +98,7 @@ class ProjectInput {
         console.log(registerValidator);
         console.log("validator", validatorResult);
         if (validatorResult.isValid) {
+            applicationState.addProject(project);
             this.clearInput();
             return;
         }
@@ -132,17 +138,25 @@ class ProjectInput {
 *
 * */
 class ProjectList {
+    private projects: ProjectModel[];
     templateEl: HTMLTemplateElement;
     hostEl: HTMLDivElement;
     templateContent: HTMLElement;
 
 //note templateId:project-list hostingId:app
     constructor(templateId: string, hostingId: string, private type: 'active' | 'finished') {
+        this.projects = [];
         this.templateEl = document.getElementById(templateId)! as HTMLTemplateElement;
         this.hostEl = document.getElementById(hostingId)! as HTMLDivElement;
         const importedNode: DocumentFragment = document.importNode(this.templateEl.content, true);
         this.templateContent = importedNode.firstElementChild as HTMLElement;
         this.templateContent.id = `${this.type}-'projects`;
+
+        // add event listener
+        applicationState.addEventListener((projects: ProjectModel[]) => {
+            this.projects = projects;
+            this.renderProjects();
+        });
 
         // note: render the data
         this.attach();
@@ -157,6 +171,16 @@ class ProjectList {
     private renderContent() {
         this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`
         this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
+    }
+
+    private renderProjects() {
+        const listEl = document.getElementById(`${this.type}-projects-list`) as HTMLUListElement;
+        this.projects.map((project) => {
+            const item = document.createElement('li');
+            item.textContent = project.title;
+            listEl.appendChild(item);
+        })
+
     }
 }
 
