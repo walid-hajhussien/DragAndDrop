@@ -39,14 +39,74 @@ class ValidatorInfoModel {
 
 // Section : Classes
 /*
+* note  : base class which contain the common method & property
+*   abstract make the class just for inheritance
+*
+* */
+abstract class ComponentProject<T extends HTMLElement, U extends HTMLElement> {
+    protected templateEl: HTMLTemplateElement;
+    protected hostingEl: T;
+    protected templateContent: U;
+    protected insertAtBegin: boolean;
+
+
+    constructor(protected templateId: string, protected hostingId: string, insertAtBegin: boolean, protected assignId?: string) {
+        this.insertAtBegin = insertAtBegin;
+        // note : get the html elements for template & target
+        this.templateEl = document.getElementById(templateId)! as HTMLTemplateElement;
+        this.hostingEl = document.getElementById(hostingId)! as T;
+
+        // note : get the Fragment of the template, true mean get all the element
+        const importedNode: DocumentFragment = document.importNode(this.templateEl.content, true);
+
+        // note:get the elements from the node
+        this.templateContent = importedNode.firstElementChild as U;
+        // note : add the ID
+        if (assignId) {
+            this.templateContent.id = assignId && assignId;
+        }
+
+        // note : render the content
+        this.attach();
+
+    }
+
+    protected attach(): void {
+        const position = (this.insertAtBegin) ? 'afterbegin' : 'beforeend';
+        this.hostingEl.insertAdjacentElement(position, this.templateContent);
+    }
+
+    abstract configContent(): void;
+
+    abstract renderContent(): void;
+
+}
+
+/*
+* note  : state class which contain the common method & property
+*   abstract make the class just for inheritance
+*
+* */
+abstract class State<T extends Function> {
+    // note : projectListener is a functions will be call at any update
+    protected projectListeners: T [];
+
+    constructor() {
+        this.projectListeners = [];
+    }
+
+    addEventListener(fn: T) {
+        this.projectListeners.push(fn);
+    }
+
+}
+
+/*
 * note 1 : you need to inform ts what is you going to select (document.getElementById) & not null
 *  ProjectInput class to render the form & control it
 * */
-class ProjectInput {
+class ProjectInput extends ComponentProject<HTMLDivElement, HTMLFormElement> {
 
-    private template: HTMLTemplateElement;
-    private hostingEl: HTMLDivElement;
-    private templateContent: HTMLFormElement;
     private titleInput: HTMLInputElement;
     private descriptionInput: HTMLInputElement;
     private peopleInput: HTMLInputElement;
@@ -54,36 +114,23 @@ class ProjectInput {
 
 
     constructor(templateId: string, hostingId: string) {
-
-        this.template = document.getElementById(templateId)! as HTMLTemplateElement;
-        this.hostingEl = document.getElementById(hostingId)! as HTMLDivElement;
-
-        // note : get the Fragment of the template
-        // note : true mean get all the element
-        const importedNode: DocumentFragment = document.importNode(this.template.content, true);
-        // note:get the elements from the node
-        this.templateContent = importedNode.firstElementChild as HTMLFormElement;
-        // note: interact with the element & the parent which is form
-        this.templateContent.id = 'user-input';
+        super(templateId, hostingId, true, 'user-input');
         this.titleInput = this.templateContent.querySelector('#title')! as HTMLInputElement;
         this.descriptionInput = this.templateContent.querySelector('#description')! as HTMLInputElement;
         this.peopleInput = this.templateContent.querySelector('#people')! as HTMLInputElement;
         this.errorLists = this.templateContent.querySelector('#errorMessages')! as HTMLUListElement;
 
-        // note : render the content
-        this.attach();
         // note : add the event
-        this.configForm()
-    }
-
-    private attach(): void {
-        this.hostingEl.insertAdjacentElement('afterbegin', this.templateContent);
+        this.configContent()
     }
 
 
-    private configForm() {
+    configContent() {
         // note : addEventListener will missing the context , we can fix by using bind or decorator
         this.templateContent.addEventListener('submit', this.submitForm);
+    }
+
+    renderContent() {
     }
 
     @AutoBindingDecorator
@@ -135,21 +182,23 @@ class ProjectInput {
 * note : project list class to render the projects on the dom , active:active project, finished:finished project
 *
 * */
-class ProjectList {
+class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
     private projects: ProjectModel[];
-    templateEl: HTMLTemplateElement;
-    hostEl: HTMLDivElement;
-    templateContent: HTMLElement;
+
 
 //note templateId:project-list hostingId:app
     constructor(templateId: string, hostingId: string, private type: 'active' | 'finished') {
-        this.projects = [];
-        this.templateEl = document.getElementById(templateId)! as HTMLTemplateElement;
-        this.hostEl = document.getElementById(hostingId)! as HTMLDivElement;
-        const importedNode: DocumentFragment = document.importNode(this.templateEl.content, true);
-        this.templateContent = importedNode.firstElementChild as HTMLElement;
-        this.templateContent.id = `${this.type}-'projects`;
 
+        super(templateId, hostingId, false, `${type}-projects`);
+        this.projects = [];
+
+
+        this.configContent();
+
+    }
+
+
+    configContent() {
         // add event listener
         applicationState.addEventListener((projects: ProjectModel[]) => {
             this.projects = projects.filter((value) => {
@@ -158,25 +207,14 @@ class ProjectList {
                 }
                 return value.status === ProjectStatus.Finished;
             });
-            this.renderProjects();
+            this.renderContent();
         });
 
-        // note: render the data
-        this.attach();
-        this.renderContent();
-
-    }
-
-    private attach(): void {
-        this.hostEl.insertAdjacentElement('beforeend', this.templateContent);
-    }
-
-    private renderContent() {
         this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`
         this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
     }
 
-    private renderProjects() {
+    renderContent() {
         const listEl = document.getElementById(`${this.type}-projects-list`) as HTMLUListElement;
         listEl.innerHTML = "";
         this.projects.map((project) => {
@@ -189,20 +227,29 @@ class ProjectList {
 }
 
 /*
+* note : project Item class to render the projects details inside the list
+*
+* */
+
+class ProjectItem {
+
+}
+
+/*
 * note : state management class to mange the application state
 *  we using private constructor to apply the singleton pattern
 * note : we're guaranteed to always work with the exact same object and we'll always only have one object of the type in the entire application
 *   which is the idea here because I only want to have one state management object for our project
 * */
 
-class ProjectState {
-    // note : projectListener is a functions will be call at any update
-    private projectListeners: ListenerFn [];
+class ProjectState extends State<ListenerFn> {
+
     private projects: ProjectModel[];
     private id: number;
     private static instance: ProjectState;
 
     private constructor(startingId: number = 1) {
+        super();
         this.id = startingId;
         this.projects = [];
         this.projectListeners = [];
@@ -232,11 +279,6 @@ class ProjectState {
             fn(this.projects.slice());
         })
     }
-
-    addEventListener(fn: ListenerFn) {
-        this.projectListeners.push(fn);
-    }
-
 
 }
 
