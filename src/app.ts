@@ -20,12 +20,14 @@ class ProjectModel {
     public people: number;
     @PositiveValueDecorator()
     public id: number;
+    public status: ProjectStatus;
 
-    constructor(title: string, description: string, people: number, id: number) {
+    constructor(title: string, description: string, people: number, id: number, status: ProjectStatus) {
         this.description = description;
         this.title = title;
         this.people = people;
         this.id = id;
+        this.status = status;
     }
 }
 
@@ -41,7 +43,7 @@ class ValidatorInfoModel {
 *  ProjectInput class to render the form & control it
 * */
 class ProjectInput {
-    private projects: ProjectModel[];
+
     private template: HTMLTemplateElement;
     private hostingEl: HTMLDivElement;
     private templateContent: HTMLFormElement;
@@ -52,7 +54,7 @@ class ProjectInput {
 
 
     constructor(templateId: string, hostingId: string) {
-        this.projects = [];
+
         this.template = document.getElementById(templateId)! as HTMLTemplateElement;
         this.hostingEl = document.getElementById(hostingId)! as HTMLDivElement;
 
@@ -67,11 +69,7 @@ class ProjectInput {
         this.descriptionInput = this.templateContent.querySelector('#description')! as HTMLInputElement;
         this.peopleInput = this.templateContent.querySelector('#people')! as HTMLInputElement;
         this.errorLists = this.templateContent.querySelector('#errorMessages')! as HTMLUListElement;
-        //note: add eventListener
-        applicationState.addEventListener((projects: ProjectModel[]) => {
-            this.projects = projects;
-            console.log("event", this.projects);
-        })
+
         // note : render the content
         this.attach();
         // note : add the event
@@ -93,7 +91,7 @@ class ProjectInput {
         event.preventDefault();
         const input: UserInputType = this.getUserInput();
         const [title, desc, people] = input;
-        const project: ProjectModel = new ProjectModel(title, desc, people, applicationState.generateId());
+        const project: ProjectModel = new ProjectModel(title, desc, people, applicationState.generateId(), ProjectStatus.Active);
         const validatorResult = validator(project);
         console.log(registerValidator);
         console.log("validator", validatorResult);
@@ -154,7 +152,12 @@ class ProjectList {
 
         // add event listener
         applicationState.addEventListener((projects: ProjectModel[]) => {
-            this.projects = projects;
+            this.projects = projects.filter((value) => {
+                if (this.type === 'active') {
+                    return value.status === ProjectStatus.Active;
+                }
+                return value.status === ProjectStatus.Finished;
+            });
             this.renderProjects();
         });
 
@@ -175,6 +178,7 @@ class ProjectList {
 
     private renderProjects() {
         const listEl = document.getElementById(`${this.type}-projects-list`) as HTMLUListElement;
+        listEl.innerHTML = "";
         this.projects.map((project) => {
             const item = document.createElement('li');
             item.textContent = project.title;
@@ -193,7 +197,7 @@ class ProjectList {
 
 class ProjectState {
     // note : projectListener is a functions will be call at any update
-    private projectListeners: Function [];
+    private projectListeners: ListenerFn [];
     private projects: ProjectModel[];
     private id: number;
     private static instance: ProjectState;
@@ -229,7 +233,7 @@ class ProjectState {
         })
     }
 
-    addEventListener(fn: Function) {
+    addEventListener(fn: ListenerFn) {
         this.projectListeners.push(fn);
     }
 
@@ -331,6 +335,10 @@ function PositiveValueDecorator(): PropertyDecoratorType {
 type UserInputType = [string, string, number];
 type PropertyDecoratorType = (target: any, name: string) => void;
 type InValid = { propertyName: string, error: string } ;
+type ListenerFn = (items: ProjectModel[]) => void;
+
+// section : enum
+enum ProjectStatus {Active, Finished}
 
 
 // section: interface
