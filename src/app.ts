@@ -87,7 +87,7 @@ class ProjectInput {
         const validatorResult = validator(project);
         console.log(registerValidator);
         console.log("validator", validatorResult);
-        if(validatorResult.isValid){
+        if (validatorResult.isValid) {
             this.clearInput();
             return;
         }
@@ -120,6 +120,22 @@ class ProjectInput {
         this.errorLists.innerHTML = lists;
     }
 
+}
+
+//note : project list class to render the projects on the dom , on:active , off:finished
+class ProjectsList {
+    templateEl: HTMLTemplateElement;
+    hostEl: HTMLDivElement;
+    templateContent: HTMLElement;
+
+//note templateId:project-list hostingId:app
+    constructor(templateId: string, hostingId: string, private type: 'on' | 'off') {
+        this.templateEl = document.getElementById(templateId)! as HTMLTemplateElement;
+        this.hostEl = document.getElementById(hostingId)! as HTMLDivElement;
+        const importedNode: DocumentFragment = document.importNode(this.templateEl.content, true);
+        this.templateContent = importedNode.firstElementChild as HTMLElement;
+
+    }
 }
 
 // section : Decorator
@@ -246,7 +262,10 @@ function validator(obj: any): ValidatorInfoModel {
                     const isValidProperty = obj[propertyName].length > 0;
                     if (!isValidProperty) {
                         isValid = false;
-                        inValidProperty.push({propertyName: propertyName, error: `The ${propertyName.toLocaleUpperCase()} is required!`})
+                        inValidProperty.push({
+                            propertyName: propertyName,
+                            error: `The ${propertyName.toLocaleUpperCase()} is required!`
+                        })
                     }
                     break;
                 }
