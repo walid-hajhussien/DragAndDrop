@@ -182,8 +182,10 @@ class ProjectInput extends ComponentProject<HTMLDivElement, HTMLFormElement> {
 * note : project list class to render the projects on the dom , active:active project, finished:finished project
 *
 * */
-class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
+class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implements DraggableTarget{
     private projects: ProjectModel[];
+    // note: list inside element content
+    private listEl:HTMLUListElement;
 
 
 //note templateId:project-list hostingId:app
@@ -192,6 +194,7 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
         super(templateId, hostingId, false, `${type}-projects`);
         this.projects = [];
 
+        this.listEl =  this.templateContent.querySelector('ul')!;
         this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`;
         this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
 
@@ -202,7 +205,7 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
 
 
     configContent() {
-        // add event listener
+        // note: add event listener
         applicationState.addEventListener((projects: ProjectModel[]) => {
             this.projects = projects.filter((value) => {
                 if (this.type === 'active') {
@@ -212,6 +215,11 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
             });
             this.renderContent();
         });
+
+        // note: add drop event
+        this.templateContent.addEventListener('dragover',this.dragOver);
+        this.templateContent.addEventListener('dragleave',this.dragLeave);
+        this.templateContent.addEventListener('drop',this.dropElement);
 
 
     }
@@ -225,6 +233,34 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
             // listEl.appendChild(item);
             new ProjectItem(`${this.type}-projects-list`, project, 'single-project')
         })
+    }
+
+    @AutoBindingDecorator
+    dragOver(event: DragEvent): void {
+        // note : check if the element allow to drop & its a text not image
+        //   preventDefault because the default is not allow drop & the drop event will not fire
+        if(event.dataTransfer && event.dataTransfer.types[0] === 'text/plain'){
+            event.preventDefault();
+            this.listEl.classList.add('droppable');
+        }
+
+    }
+
+    @AutoBindingDecorator
+    dragLeave(_event: DragEvent): void {
+        this.listEl.classList.remove('droppable');
+    }
+
+    @AutoBindingDecorator
+    dropElement(event: DragEvent): void {
+        // note : get the project ID
+        const projectId:number = +event.dataTransfer!.getData('text/plain');
+
+        if(this.type === 'finished'){
+            applicationState.changeProjectStatus(projectId,ProjectStatus.Finished);
+        }else{
+            applicationState.changeProjectStatus(projectId,ProjectStatus.Active);
+        }
 
 
     }
@@ -259,8 +295,8 @@ class ProjectItems<T extends HTMLElement> {
 *
 * */
 
-class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
-    private isFinished: boolean;
+class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> implements Draggable{
+    private readonly isFinished: boolean;
 
     get persons() {
         return (this.project.people > 1) ? this.project.people + ' Persons Assigns' : '1 Person Assigns'
@@ -278,7 +314,7 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
         this.templateContent.querySelector('h2')!.textContent = this.project.title;
         this.templateContent.querySelector('h3')!.textContent = this.persons;
         this.templateContent.querySelector('p')!.textContent = this.project.description;
-        if(this.isFinished){
+        if (this.isFinished) {
             this.templateContent.querySelector('button')!.textContent = 'Active';
             this.templateContent.querySelector('button')!.style.backgroundColor = 'blue';
             this.templateContent.querySelector('button')!.style.border = '1px solid blue';
@@ -286,11 +322,35 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
     }
 
     configContent(): void {
-        this.templateContent.addEventListener('click', () => {
+        // note: click Event
+        this.templateContent.querySelector('button')!.addEventListener('click', () => {
             const neStatus = (this.isFinished) ? ProjectStatus.Active : ProjectStatus.Finished;
             applicationState.changeProjectStatus(this.project.id, neStatus);
-        })
+        });
 
+
+        // note : Drag Event
+        this.templateContent.draggable = true;
+        this.templateContent.addEventListener('dragstart',this.dragStart);
+        this.templateContent.addEventListener('dragend',this.dragEnd);
+
+
+    }
+
+    @AutoBindingDecorator
+    dragStart(event: DragEvent): void {
+        // note: add info to the target event
+        event.dataTransfer!.setData('text/plain',this.project.id.toString());
+        // note : This basically controls how the cursor will look like and tells the browser a little bit about our intention
+        //  that we plan to move an element from a to b.
+        // Note : move : the element will be remove from a & add to b
+        //  copy: the element will be copy from a to b
+        event.dataTransfer!.effectAllowed = 'move';
+    }
+
+    @AutoBindingDecorator
+    dragEnd(event: DragEvent): void {
+        console.log("dragEnd",event);
     }
 
 
@@ -461,6 +521,31 @@ interface ValidatorStorage {
         [propertyName: string]: ValidatorModel[];
     }
 }
+
+// note : Draggable interface
+interface Draggable {
+    dragStart(event: DragEvent): void;
+
+    dragEnd(event: DragEvent): void
+
+}
+
+/*
+* note:  DraggableTarget interface
+* */
+interface DraggableTarget {
+// note : to inform js this is a draggable element
+    dragOver(event: DragEvent): void;
+
+// note: to handle the drop
+    dropElement(event: DragEvent): void;
+
+// note : reverse the dragOver feedback like css
+    dragLeave(event: DragEvent): void;
+
+}
+
+
 
 // section : utility 
 function validator(obj: any): ValidatorInfoModel {
