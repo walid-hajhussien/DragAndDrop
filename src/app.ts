@@ -63,7 +63,7 @@ abstract class ComponentProject<T extends HTMLElement, U extends HTMLElement> {
         this.templateContent = importedNode.firstElementChild as U;
         // note : add the ID
         if (assignId) {
-            this.templateContent.id = assignId && assignId;
+            this.templateContent.id = assignId ;
         }
 
         // note : render the content
@@ -186,11 +186,15 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
     private projects: ProjectModel[];
 
 
+
 //note templateId:project-list hostingId:app
     constructor(templateId: string, hostingId: string, private type: 'active' | 'finished') {
 
         super(templateId, hostingId, false, `${type}-projects`);
         this.projects = [];
+
+        this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`;
+        this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
 
 
         this.configContent();
@@ -210,18 +214,19 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
             this.renderContent();
         });
 
-        this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`
-        this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
+
     }
 
     renderContent() {
         const listEl = document.getElementById(`${this.type}-projects-list`) as HTMLUListElement;
         listEl.innerHTML = "";
         this.projects.map((project) => {
-            const item = document.createElement('li');
-            item.textContent = project.title;
-            listEl.appendChild(item);
+            // const item = document.createElement('li');
+            // item.textContent = project.title;
+            // listEl.appendChild(item);
+            new ProjectItem(`${this.type}-projects-list`,project,'single-project')
         })
+
 
     }
 }
@@ -231,9 +236,50 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
 *
 * */
 
-class ProjectItem {
+class ProjectItems<T extends HTMLElement> {
+    private hostingEl: T;
+
+    constructor(private hostingId: string, private itemTag: string) {
+        this.hostingEl = document.getElementById(hostingId) as T;
+    }
+
+    render(projects: ProjectModel[]) {
+        this.hostingEl.innerHTML = "";
+        projects.map((project) => {
+            const item = document.createElement(this.itemTag);
+            item.textContent = project.title;
+            this.hostingEl.appendChild(item);
+        })
+
+    }
 
 }
+
+/*
+* note : project Item class to render the projects details inside the list
+*
+* */
+
+class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
+
+    constructor( hostingId: string, private project: ProjectModel, templateId: string) {
+        super(templateId, hostingId, false, project.id.toString());
+        this.renderContent();
+
+    }
+
+    renderContent(): void {
+        this.templateContent.querySelector('h2')!.textContent = this.project.title;
+        this.templateContent.querySelector('h3')!.textContent = this.project.people.toString();
+        this.templateContent.querySelector('p')!.textContent = this.project.description;
+    }
+
+    configContent(): void {
+    }
+
+
+}
+
 
 /*
 * note : state management class to mange the application state
