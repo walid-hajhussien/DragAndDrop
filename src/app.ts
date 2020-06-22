@@ -63,7 +63,7 @@ abstract class ComponentProject<T extends HTMLElement, U extends HTMLElement> {
         this.templateContent = importedNode.firstElementChild as U;
         // note : add the ID
         if (assignId) {
-            this.templateContent.id = assignId ;
+            this.templateContent.id = assignId;
         }
 
         // note : render the content
@@ -186,7 +186,6 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
     private projects: ProjectModel[];
 
 
-
 //note templateId:project-list hostingId:app
     constructor(templateId: string, hostingId: string, private type: 'active' | 'finished') {
 
@@ -224,7 +223,7 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> {
             // const item = document.createElement('li');
             // item.textContent = project.title;
             // listEl.appendChild(item);
-            new ProjectItem(`${this.type}-projects-list`,project,'single-project')
+            new ProjectItem(`${this.type}-projects-list`, project, 'single-project')
         })
 
 
@@ -261,14 +260,17 @@ class ProjectItems<T extends HTMLElement> {
 * */
 
 class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
+    private isFinished: boolean;
 
-    get persons(){
-        return (this.project.people>1)? this.project.people + ' Persons Assigns':'1 Person Assigns'
+    get persons() {
+        return (this.project.people > 1) ? this.project.people + ' Persons Assigns' : '1 Person Assigns'
     }
 
-    constructor( hostingId: string, private project: ProjectModel, templateId: string) {
+    constructor(hostingId: string, private project: ProjectModel, templateId: string) {
         super(templateId, hostingId, false, project.id.toString());
+        this.isFinished = this.project.status === ProjectStatus.Finished;
         this.renderContent();
+        this.configContent();
 
     }
 
@@ -276,9 +278,19 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
         this.templateContent.querySelector('h2')!.textContent = this.project.title;
         this.templateContent.querySelector('h3')!.textContent = this.persons;
         this.templateContent.querySelector('p')!.textContent = this.project.description;
+        if(this.isFinished){
+            this.templateContent.querySelector('button')!.textContent = 'Active';
+            this.templateContent.querySelector('button')!.style.backgroundColor = 'blue';
+            this.templateContent.querySelector('button')!.style.border = '1px solid blue';
+        }
     }
 
     configContent(): void {
+        this.templateContent.addEventListener('click', () => {
+            const neStatus = (this.isFinished) ? ProjectStatus.Active : ProjectStatus.Finished;
+            applicationState.changeProjectStatus(this.project.id, neStatus);
+        })
+
     }
 
 
@@ -322,6 +334,15 @@ class ProjectState extends State<ListenerFn> {
         const newId = this.id;
         this.id++;
         return newId;
+    }
+
+    changeProjectStatus(projectId: number, status: ProjectStatus) {
+        this.projects.map((project) => {
+            if (project.id === projectId) {
+                project.status = status
+            }
+        });
+        this.runListenerFun();
     }
 
     private runListenerFun() {
