@@ -182,10 +182,10 @@ class ProjectInput extends ComponentProject<HTMLDivElement, HTMLFormElement> {
 * note : project list class to render the projects on the dom , active:active project, finished:finished project
 *
 * */
-class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implements DraggableTarget{
+class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implements DraggableTarget {
     private projects: ProjectModel[];
     // note: list inside element content
-    private listEl:HTMLUListElement;
+    private listEl: HTMLUListElement;
 
 
 //note templateId:project-list hostingId:app
@@ -194,7 +194,7 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implemen
         super(templateId, hostingId, false, `${type}-projects`);
         this.projects = [];
 
-        this.listEl =  this.templateContent.querySelector('ul')!;
+        this.listEl = this.templateContent.querySelector('ul')!;
         this.templateContent.querySelector('ul')!.id = `${this.type}-projects-list`;
         this.templateContent.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
 
@@ -217,9 +217,9 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implemen
         });
 
         // note: add drop event
-        this.templateContent.addEventListener('dragover',this.dragOver);
-        this.templateContent.addEventListener('dragleave',this.dragLeave);
-        this.templateContent.addEventListener('drop',this.dropElement);
+        this.templateContent.addEventListener('dragover', this.dragOver);
+        this.templateContent.addEventListener('dragleave', this.dragLeave);
+        this.templateContent.addEventListener('drop', this.dropElement);
 
 
     }
@@ -239,7 +239,7 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implemen
     dragOver(event: DragEvent): void {
         // note : check if the element allow to drop & its a text not image
         //   preventDefault because the default is not allow drop & the drop event will not fire
-        if(event.dataTransfer && event.dataTransfer.types[0] === 'text/plain'){
+        if (event.dataTransfer && event.dataTransfer.types[0] === 'text/id') {
             event.preventDefault();
             this.listEl.classList.add('droppable');
         }
@@ -254,14 +254,22 @@ class ProjectList extends ComponentProject<HTMLDivElement, HTMLElement> implemen
     @AutoBindingDecorator
     dropElement(event: DragEvent): void {
         // note : get the project ID
-        const projectId:number = +event.dataTransfer!.getData('text/plain');
+        const projectId: number = +event.dataTransfer!.getData('text/id');
+        const projectType = event.dataTransfer!.getData('text/type');
 
-        if(this.type === 'finished'){
-            applicationState.changeProjectStatus(projectId,ProjectStatus.Finished);
-        }else{
-            applicationState.changeProjectStatus(projectId,ProjectStatus.Active);
+        // note : move to the same place  a to a
+        if(this.type === projectType){
+            this.listEl.classList.remove('droppable');
+            return;
         }
 
+
+        if (this.type === 'finished') {
+            applicationState.changeProjectStatus(projectId, ProjectStatus.Finished);
+        } else {
+            applicationState.changeProjectStatus(projectId, ProjectStatus.Active);
+        }
+        this.listEl.classList.remove('droppable');
 
     }
 }
@@ -295,7 +303,7 @@ class ProjectItems<T extends HTMLElement> {
 *
 * */
 
-class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> implements Draggable{
+class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> implements Draggable {
     private readonly isFinished: boolean;
 
     get persons() {
@@ -331,8 +339,8 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> impl
 
         // note : Drag Event
         this.templateContent.draggable = true;
-        this.templateContent.addEventListener('dragstart',this.dragStart);
-        this.templateContent.addEventListener('dragend',this.dragEnd);
+        this.templateContent.addEventListener('dragstart', this.dragStart);
+        this.templateContent.addEventListener('dragend', this.dragEnd);
 
 
     }
@@ -340,7 +348,8 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> impl
     @AutoBindingDecorator
     dragStart(event: DragEvent): void {
         // note: add info to the target event
-        event.dataTransfer!.setData('text/plain',this.project.id.toString());
+        event.dataTransfer!.setData('text/id', this.project.id.toString());
+        event.dataTransfer!.setData('text/type', (this.isFinished) ? 'finished' : 'active');
         // note : This basically controls how the cursor will look like and tells the browser a little bit about our intention
         //  that we plan to move an element from a to b.
         // Note : move : the element will be remove from a & add to b
@@ -350,7 +359,7 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> impl
 
     @AutoBindingDecorator
     dragEnd(event: DragEvent): void {
-        console.log("dragEnd",event);
+        console.log("dragEnd", event);
     }
 
 
@@ -546,8 +555,7 @@ interface DraggableTarget {
 }
 
 
-
-// section : utility 
+// section : utility
 function validator(obj: any): ValidatorInfoModel {
     const className = obj.constructor.name;
     const classValidator = registerValidator[className];
