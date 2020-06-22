@@ -262,6 +262,10 @@ class ProjectItems<T extends HTMLElement> {
 
 class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
 
+    get persons(){
+        return (this.project.people>1)? this.project.people + ' Persons Assigns':'1 Person Assigns'
+    }
+
     constructor( hostingId: string, private project: ProjectModel, templateId: string) {
         super(templateId, hostingId, false, project.id.toString());
         this.renderContent();
@@ -270,7 +274,7 @@ class ProjectItem extends ComponentProject<HTMLUListElement, HTMLLIElement> {
 
     renderContent(): void {
         this.templateContent.querySelector('h2')!.textContent = this.project.title;
-        this.templateContent.querySelector('h3')!.textContent = this.project.people.toString();
+        this.templateContent.querySelector('h3')!.textContent = this.persons;
         this.templateContent.querySelector('p')!.textContent = this.project.description;
     }
 
