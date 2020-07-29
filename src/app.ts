@@ -7,7 +7,7 @@
 /// <reference path="interfaces/dragDrop.interface.ts"/>
 /// <reference path="enums/app.enums.ts"/>
 /// <reference path="utility/app.utilities.ts"/>
-/// <reference path="classes/app.classes.ts"/>
+/// <reference path="components/app.classes.ts"/>
 /// <reference path="main.ts"/>
 
 namespace App {
